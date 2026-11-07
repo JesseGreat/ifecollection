@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* IfeCollection theme: one light theme with strong contrast for bright shop lighting. */
+@theme {
+  --color-brand-50: #fdf2f7;
+  --color-brand-100: #fbe4ef;
+  --color-brand-200: #f6c4db;
+  --color-brand-600: #a3164f;
+  --color-brand-700: #861041;
+  --color-brand-800: #6c0c34;
+  --color-brand-900: #4d0825;
+  --color-gold-300: #f2cf7a;
+  --color-gold-500: #c9962a;
+  --color-ink: #111114;
+  --color-muted: #55525a;
+  --color-line: #e4dfe3;
+  --color-canvas: #f7f4f6;
+  --color-cash: #146c3a;
+  --color-transfer: #1d4ed8;
+  --color-pos: #7c2d12;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --animate-sheet-up: sheet-up 180ms ease-out;
+  --animate-shimmer: shimmer 1.2s infinite linear;
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+  }
+}
+
+/* Custom Tailwind utilities (usable with variants, e.g. lg:pb-safe). */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility skeleton {
+  background: linear-gradient(90deg, #ece7ea 0px, #f6f2f4 60px, #ece7ea 120px);
+  background-size: 200px 100%;
+  animation: var(--animate-shimmer);
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-canvas font-sans text-ink;
+    overscroll-behavior-y: contain;
+  }
+  /* 16px stops iPhones zooming into inputs. */
+  input,
+  select,
+  textarea {
+    @apply text-base;
+  }
+  button,
+  a,
+  summary {
+    touch-action: manipulation;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  @media print {
+    body {
+      @apply bg-white;
+    }
+  }
+}
