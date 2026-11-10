@@ -9,6 +9,9 @@ export async function GET() {
   const { data, error } = await supabase.rpc("session_status");
   const status: SessionStatus = error || !data ? { signed_in: false } : (data as SessionStatus);
   if (status.signed_in && !status.allowed) {
+    if (status.role === "staff" && status.active && !status.replaced && !status.within_hours) {
+      await supabase.rpc("log_auth_event", { p_action: "auto_logout" });
+    }
     await supabase.auth.signOut({ scope: "local" });
   }
   return NextResponse.json(status, { headers: { "Cache-Control": "no-store" } });

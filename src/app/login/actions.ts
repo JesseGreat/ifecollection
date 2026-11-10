@@ -1,11 +1,13 @@
 "use server";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { formatClock } from "@/lib/format";
+import { describeDevice, LOCATION_MESSAGES, networkLocation, readGeo } from "@/lib/login-info";
 import { homeFor, type SessionStatus } from "@/lib/session";
 import { usernameToEmail } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
-export type LoginState = { error?: string; closed?: boolean };
+export type LoginState = { error?: string; closed?: boolean; needsLocation?: boolean };
 
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const username = String(formData.get("username") ?? "").trim().toLowerCase();
@@ -20,17 +22,23 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     return { error: "Wrong username or password." };
   }
 
+  // Where/how this login happened: device, network location (from Vercel), GPS (from the phone).
+  const h = await headers();
+  const geo = readGeo(formData);
+  const details = { device: describeDevice(h.get("user-agent")), ...networkLocation(h), ...geo };
+  const log = (action: string) => supabase.rpc("log_auth_event", { p_action: action, p_details: details });
+
   // Password is right. Now ask the DATABASE clock whether this person may come in.
   const { data } = await supabase.rpc("session_status");
   const status = data as SessionStatus | null;
 
   if (!status?.found || !status.active) {
-    await supabase.rpc("log_auth_event", { p_action: "login_blocked_inactive" });
+    await log("login_blocked_inactive");
     await supabase.auth.signOut({ scope: "local" });
     return { error: "Your account is turned off. Please ask the admin." };
   }
   if (status.role === "staff" && !status.within_hours) {
-    await supabase.rpc("log_auth_event", { p_action: "login_blocked_hours" });
+    await log("login_blocked_hours");
     await supabase.auth.signOut({ scope: "local" });
     return {
       closed: true,
@@ -38,7 +46,21 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     };
   }
 
-  await supabase.rpc("log_auth_event", { p_action: "login" });
+  // Staff must share their phone's GPS location to log in (the admin is asked, but not blocked).
+  if (status.role === "staff" && geo.lat == null) {
+    await log("login_blocked_location");
+    await supabase.auth.signOut({ scope: "local" });
+    return { needsLocation: true, error: LOCATION_MESSAGES[geo.location_error ?? ""] ?? LOCATION_MESSAGES.not_shared };
+  }
+
+  // One device per account: this login becomes the only one; other devices are cut off.
+  const { error: claimErr } = await supabase.rpc("claim_session");
+  if (claimErr) {
+    await supabase.auth.signOut({ scope: "local" });
+    return { error: "Could not log in. Please try again." };
+  }
+  await supabase.auth.signOut({ scope: "others" }).catch(() => {});
+  await log("login");
   redirect(homeFor(status.role));
 }
 

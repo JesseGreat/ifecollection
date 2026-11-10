@@ -26,6 +26,9 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     timezoneId: "America/New_York", // the phone's clock/zone must not matter
+    // Phones share their GPS position at login (a shop in Ikeja, Lagos). Tests that refuse it override this.
+    geolocation: { latitude: 6.6018, longitude: 3.3515, accuracy: 15 },
+    permissions: ["geolocation"],
   },
   projects: [
     {

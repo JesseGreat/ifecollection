@@ -7,8 +7,8 @@ const SIZES = [
   { width: 390, height: 844 },
   { width: 1280, height: 800 },
 ];
-const STAFF_PAGES = ["/sell", "/sell/checkout", "/my-sales"];
-const ADMIN_PAGES = ["/admin", "/admin/products", "/admin/products/new", "/admin/sales", "/admin/staff", "/admin/settings", "/admin/activity", "/admin/more", "/admin/report"];
+const STAFF_PAGES = ["/sell", "/sell/checkout", "/my-sales", "/count"];
+const ADMIN_PAGES = ["/admin", "/admin/products", "/admin/products/new", "/admin/sales", "/admin/staff", "/admin/settings", "/admin/activity", "/admin/more", "/admin/report", "/admin/counts"];
 
 test.beforeAll(async () => openShop());
 

@@ -20,7 +20,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       ? `IfeCollection is closed. You can log in from ${formatClock(openTime)}.`
       : reason === "inactive"
         ? "Your account is turned off. Please ask the admin."
-        : null;
+        : reason === "elsewhere"
+          ? "You were logged out because your account was used to log in on another device."
+          : null;
 
   return (
     <main className="flex min-h-dvh flex-col bg-brand-800">

@@ -66,8 +66,12 @@ export function Checkout() {
       router.replace(`/receipt/${data.id}?new=1`);
     } catch (e) {
       const f = friendlyError(e);
-      if (f.code === "STORE_CLOSED") {
-        window.location.replace("/login?reason=closed");
+      if (f.code === "OPENING_COUNT_REQUIRED") {
+        window.location.replace("/count/opening");
+        return;
+      }
+      if (f.code === "STORE_CLOSED" || f.code === "SESSION_REPLACED") {
+        window.location.replace(`/login?reason=${f.code === "STORE_CLOSED" ? "closed" : "elsewhere"}`);
         return;
       }
       if (f.code === "INSUFFICIENT_STOCK" || f.code === "PRICE_CHANGED" || f.code === "PRODUCT_UNAVAILABLE") {

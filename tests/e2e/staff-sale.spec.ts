@@ -19,7 +19,18 @@ async function addToCart(page: Page, product: string, choose: string[] = [], ext
   await sheet.getByRole("button", { name: /Add to cart/ }).click();
 }
 
-test.beforeEach(async () => openShop());
+test.beforeEach(async () => {
+  await openShop();
+  // Known stock for the items these tests sell (the test database is reused between runs).
+  await sql(
+    `update public.product_variants v set quantity = case p.name when 'Ankara head wrap' then 4 else 10 end
+       from public.products p
+      where p.id = v.product_id
+        and ((p.name = 'Adire shirt' and v.colour = 'Blue' and v.size = 'L')
+          or (p.name = 'Palazzo trousers' and v.colour = 'Black' and v.size = 'M')
+          or p.name = 'Ankara head wrap')`,
+  );
+});
 
 test("staff makes a sale and gets an IfeCollection receipt", async ({ page }) => {
   await login(page, STAFF);

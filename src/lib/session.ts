@@ -11,6 +11,8 @@ export type SessionStatus = {
   full_name?: string | null;
   username?: string | null;
   active?: boolean;
+  /** This account has since logged in on another device (newest login wins). */
+  replaced?: boolean;
   within_hours?: boolean;
   allowed?: boolean;
   server_time?: string;
@@ -19,6 +21,10 @@ export type SessionStatus = {
   close_time?: string;
   warn_minutes?: number;
   seconds_until_close?: number | null;
+  /** This person did today's opening stock count (required before selling). */
+  opening_done?: boolean;
+  /** This person closed today (closing count done or "count tomorrow"); no more sales today. */
+  closing_done?: boolean;
 };
 
 export const PUBLIC_PATHS = ["/login", "/offline"];
@@ -43,6 +49,9 @@ export function gateDecision(status: SessionStatus | null, pathname: string): Ga
   }
   if (!status.found || !status.active) {
     return { kind: "redirect", to: "/login?reason=inactive", signOut: true };
+  }
+  if (status.replaced) {
+    return { kind: "redirect", to: "/login?reason=elsewhere", signOut: true };
   }
   if (status.role === "staff" && !status.within_hours) {
     return { kind: "redirect", to: "/login?reason=closed", signOut: true };

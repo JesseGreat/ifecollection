@@ -2,9 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { logout } from "@/app/login/actions";
 import type { SessionStatus } from "@/lib/session";
 import { Icon, type IconName } from "./icons";
+import { LogoutButton } from "./LogoutButton";
 import { SessionGuard } from "./SessionGuard";
 import { cx } from "./ui";
 
@@ -12,6 +12,7 @@ type NavItem = { href: string; label: string; icon: IconName; exact?: boolean };
 
 const STAFF_NAV: NavItem[] = [
   { href: "/sell", label: "Sell", icon: "bag" },
+  { href: "/count", label: "Count", icon: "list" },
   { href: "/my-sales", label: "My sales", icon: "receipt" },
 ];
 const ADMIN_BOTTOM: NavItem[] = [
@@ -26,6 +27,7 @@ const ADMIN_SIDE: NavItem[] = [
   { href: "/sell", label: "Sell", icon: "bag" },
   { href: "/admin/products", label: "Products & stock", icon: "box" },
   { href: "/admin/sales", label: "Sales", icon: "receipt" },
+  { href: "/admin/counts", label: "Stock counts", icon: "list" },
   { href: "/admin/staff", label: "Staff", icon: "users" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },
   { href: "/admin/activity", label: "Activity log", icon: "activity" },
@@ -38,7 +40,7 @@ export function AppShell({ status, children }: { status: SessionStatus; children
   const side = isAdmin ? ADMIN_SIDE : STAFF_NAV;
   const active = (i: NavItem) =>
     i.exact ? pathname === i.href : pathname === i.href || pathname.startsWith(`${i.href}/`) ||
-      (i.href === "/admin/more" && /^\/admin\/(staff|settings|activity|more)/.test(pathname));
+      (i.href === "/admin/more" && /^\/admin\/(staff|settings|activity|more|counts)/.test(pathname));
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[240px_1fr] print:block">
@@ -63,15 +65,15 @@ export function AppShell({ status, children }: { status: SessionStatus; children
             </Link>
           ))}
         </nav>
-        <form action={() => logout()} className="p-3">
-          <button className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 font-semibold text-white/90 hover:bg-white/10">
+        <div className="p-3">
+          <LogoutButton className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 font-semibold text-white/90 hover:bg-white/10">
             <Icon name="logout" className="size-5" /> Log out
-          </button>
-        </form>
+          </LogoutButton>
+        </div>
       </aside>
 
       <div className="flex min-h-dvh flex-col">
-        {status.role === "staff" && <SessionGuard initial={status} />}
+        <SessionGuard initial={status} />
         {/* Phone top bar */}
         <header className="print:hidden sticky top-0 z-30 flex h-12 items-center justify-between bg-brand-800 px-4 text-white lg:hidden">
           <span className="text-lg font-bold">IfeCollection</span>
@@ -103,12 +105,10 @@ export function AppShell({ status, children }: { status: SessionStatus; children
             ))}
             {!isAdmin && (
               <li className="flex-1">
-                <form action={() => logout()}>
-                  <button className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">
-                    <Icon name="logout" />
-                    Log out
-                  </button>
-                </form>
+                <LogoutButton className="flex min-h-14 w-full flex-col items-center justify-center gap-0.5 text-xs font-semibold text-muted">
+                  <Icon name="logout" />
+                  Log out
+                </LogoutButton>
               </li>
             )}
           </ul>

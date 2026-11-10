@@ -6,26 +6,46 @@ import { testDbUrl } from "./global-setup";
 export const pool = new Pool({ connectionString: testDbUrl(), max: 8 });
 
 let n = 0;
-export async function createUser(role: "admin" | "staff", fullName?: string): Promise<string> {
+export async function createUser(
+  role: "admin" | "staff",
+  fullName?: string,
+  opts: { openingCount?: boolean } = {},
+): Promise<string> {
   const username = `${role}${Date.now().toString(36)}${n++}`;
   const { rows } = await pool.query(
     `insert into auth.users (email, raw_app_meta_data) values ($1, $2) returning id`,
     [`${username}@staff.ifecollection.app`, { username, full_name: fullName ?? username, role }],
   );
+  // Staff must do a morning stock count before selling; most tests are not about that, so do it for them.
+  if (role === "staff" && opts.openingCount !== false) await markOpeningCounted(rows[0].id);
   return rows[0].id;
+}
+
+/** Record today's (Lagos) opening count as done for a staff member (fixture shortcut). */
+export async function markOpeningCounted(staffId: string) {
+  await pool.query(
+    `insert into public.stock_counts (staff_id, kind, business_day, status, submitted_at)
+     values ($1, 'opening', (now() at time zone 'Africa/Lagos')::date, 'submitted', now())
+     on conflict (staff_id, business_day, kind) do nothing`,
+    [staffId],
+  );
 }
 
 /**
  * Run fn exactly like a request through Supabase's API would: role `authenticated` (or `anon`)
  * with the user's id in request.jwt.claims. RLS and grants apply.
  */
-export async function as<T>(uid: string | null, fn: (c: PoolClient) => Promise<T>): Promise<T> {
+export async function as<T>(
+  uid: string | null,
+  fn: (c: PoolClient) => Promise<T>,
+  sessionId?: string,
+): Promise<T> {
   const c = await pool.connect();
   try {
     await c.query("begin");
     await c.query(uid ? "set local role authenticated" : "set local role anon");
     await c.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify(uid ? { sub: uid, role: "authenticated" } : { role: "anon" }),
+      JSON.stringify(uid ? { sub: uid, role: "authenticated", session_id: sessionId } : { role: "anon" }),
     ]);
     const result = await fn(c);
     await c.query("commit");
@@ -40,8 +60,8 @@ export async function as<T>(uid: string | null, fn: (c: PoolClient) => Promise<T
 
 // Tests read arbitrary JSON shapes from SQL; `any` keeps them short.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function rpc<T = any>(uid: string | null, sql: string, params: unknown[] = []): Promise<T> {
-  return as(uid, async (c) => (await c.query(sql, params)).rows[0] as T);
+export async function rpc<T = any>(uid: string | null, sql: string, params: unknown[] = [], sessionId?: string): Promise<T> {
+  return as(uid, async (c) => (await c.query(sql, params)).rows[0] as T, sessionId);
 }
 
 /** Working hours that include the real current moment (Lagos). */

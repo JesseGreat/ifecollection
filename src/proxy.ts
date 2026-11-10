@@ -38,6 +38,10 @@ export async function proxy(request: NextRequest) {
 
   if (decision.kind === "redirect") {
     if (decision.signOut) {
+      // Record closing-time logouts here: once the shop is closed, the phone's own request is refused.
+      if (status?.signed_in && status.role === "staff" && status.active && !status.replaced && !status.within_hours) {
+        await supabase.rpc("log_auth_event", { p_action: "auto_logout" });
+      }
       await supabase.auth.signOut({ scope: "local" });
     }
     response = NextResponse.redirect(new URL(decision.to, request.url));

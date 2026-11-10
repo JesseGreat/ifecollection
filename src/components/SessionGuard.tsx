@@ -1,14 +1,16 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logout } from "@/app/login/actions";
 import { formatClock, formatCountdown } from "@/lib/format";
 import { closingState, type ClosingState, type SessionStatus } from "@/lib/session";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-const RECHECK_MS = 3 * 60 * 1000;
+// Also how quickly a device notices it was replaced by a newer login elsewhere.
+const RECHECK_MS = 60 * 1000;
 
 /**
- * Staff only: shows a countdown before closing and logs out at closing time.
+ * Everyone: re-checks with the server so a device replaced by a newer login (one device per account)
+ * goes back to the login page. Staff: shows a countdown before closing and logs out at closing time.
  * The countdown starts from the SERVER's seconds_until_close; the phone only measures elapsed time
  * (performance.now), so a wrong phone clock changes nothing. The server enforces the rule anyway
  * (proxy + RLS); this is just so staff are warned and the screen does not sit there stale.
@@ -20,13 +22,14 @@ export function SessionGuard({ initial }: { initial: SessionStatus }) {
   const leaving = useRef(false);
   const [state, setState] = useState<ClosingState>({ phase: "open" });
 
-  const goToLogin = useCallback(async (reason: "closed" | "inactive") => {
+  const goToLogin = useCallback(async (reason: "closed" | "inactive" | "elsewhere") => {
     if (leaving.current) return;
     leaving.current = true;
     try {
-      if (reason === "closed") await logout("auto_logout");
+      // The server checks its own clock, records the closing-time logout and ends the session.
+      if (reason === "closed") await fetch("/api/session", { cache: "no-store" });
     } catch {
-      // The server action redirects by throwing; continue either way.
+      /* offline: still leave this screen */
     }
     await supabaseBrowser().auth.signOut({ scope: "local" }).catch(() => {});
     window.location.replace(`/login?reason=${reason}`);
@@ -43,7 +46,7 @@ export function SessionGuard({ initial }: { initial: SessionStatus }) {
       const res = await fetch("/api/session", { cache: "no-store" });
       const s = (await res.json()) as SessionStatus;
       if (!s.signed_in) return window.location.replace("/login");
-      if (!s.allowed) return goToLogin(s.active === false ? "inactive" : "closed");
+      if (!s.allowed) return goToLogin(s.replaced ? "elsewhere" : s.active === false ? "inactive" : "closed");
       base.current = { secs: s.seconds_until_close ?? null, at: performance.now() };
       evaluate();
     } catch {
@@ -78,7 +81,12 @@ export function SessionGuard({ initial }: { initial: SessionStatus }) {
         className="sticky top-0 z-40 bg-amber-400 px-4 py-2 text-center text-base font-bold text-black print:hidden"
       >
         Closing in {formatCountdown(state.secondsLeft)} – finish your sale. IfeCollection closes at{" "}
-        {formatClock(initial.close_time ?? "20:00")}.
+        {formatClock(initial.close_time ?? "20:00")}.{" "}
+        {initial.opening_done && !initial.closing_done && (
+          <Link href="/count" className="underline">
+            Do closing count
+          </Link>
+        )}
       </div>
     );
   }

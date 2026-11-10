@@ -37,6 +37,15 @@ describe("gateDecision (runs in proxy.ts on every request)", () => {
     expect(gateDecision(admin(), "/login")).toMatchObject({ to: "/admin" });
   });
 
+  it("a device replaced by a newer login (one device per account) is signed out, admin too", () => {
+    expect(gateDecision(staff({ replaced: true, allowed: false }), "/sell")).toEqual({
+      kind: "redirect",
+      to: "/login?reason=elsewhere",
+      signOut: true,
+    });
+    expect(gateDecision(admin({ replaced: true, allowed: false }), "/admin")).toMatchObject({ to: "/login?reason=elsewhere" });
+  });
+
   it("deactivated accounts are signed out", () => {
     expect(gateDecision(staff({ active: false }), "/sell")).toEqual({ kind: "redirect", to: "/login?reason=inactive", signOut: true });
     expect(gateDecision(admin({ active: false }), "/admin")).toMatchObject({ signOut: true });

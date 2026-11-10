@@ -64,6 +64,9 @@ async function main() {
   const sb = createClient(URL_, ANON, { auth: { persistSession: false } });
   const { error: loginErr } = await sb.auth.signInWithPassword({ email: email("ife"), password: ADMIN_PASSWORD });
   if (loginErr) throw new Error(`Could not log in as the seed admin: ${loginErr.message}`);
+  // One device per account: the seed becomes the admin's current login (any open admin session is logged out).
+  const { error: claimErr } = await sb.rpc("claim_session");
+  if (claimErr) throw new Error(`Could not start the seed session: ${claimErr.message}`);
 
   const catIds: Record<string, string> = {};
   for (const [i, name] of CATEGORIES.entries()) {

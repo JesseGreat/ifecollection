@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { logout } from "@/app/login/actions";
+import { LogoutButton } from "@/components/LogoutButton";
 import { Icon, type IconName } from "@/components/icons";
 import { Page, PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "More" };
 
 const LINKS: { href: string; label: string; icon: IconName; hint: string }[] = [
+  { href: "/admin/counts", label: "Stock counts", icon: "list", hint: "Opening & closing counts per sales person, differences" },
   { href: "/admin/staff", label: "Staff", icon: "users", hint: "Add staff, reset passwords, turn accounts off" },
   { href: "/admin/settings", label: "Settings", icon: "settings", hint: "Working hours, receipt, categories" },
   { href: "/admin/activity", label: "Activity log", icon: "activity", hint: "Logins, voids, stock and price changes" },
@@ -30,11 +31,11 @@ export default function MorePage() {
           </li>
         ))}
       </ul>
-      <form action={async () => { "use server"; await logout(); }} className="mt-4">
-        <button className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-700">
+      <div className="mt-4">
+        <LogoutButton className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-red-700">
           <Icon name="logout" /> Log out
-        </button>
-      </form>
+        </LogoutButton>
+      </div>
     </Page>
   );
 }
